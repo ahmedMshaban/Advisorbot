@@ -29,10 +29,12 @@ private:
     void printAvg(const std::vector<std::string>& tokens);
     void predict(const std::vector<std::string>& tokens);
     void gotoNextTimeframe();
-    bool commandValidator(const std::vector<std::string>& tokens);
+    bool commandIsValid(const std::vector<std::string>& tokens);
     
     OrderBook orderBook{"20200601.csv"};
     std::string currentTime;
+    std::vector<std::string> avaliableCommands{"help", "prod", "min", "max", "avg", "predict", "time", "step"};
+
 };
 
 #endif /* AdvisorMain_hpp */

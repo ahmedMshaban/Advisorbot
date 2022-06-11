@@ -79,14 +79,20 @@ void AdvisorMain::processUserOption(std::string userOption) {
     std::vector<std::string> tokens = CSVReader::tokenise(userOption, ' ');
     
     if (userOption.find("help") != std::string::npos && tokens[0] == "help") {
+        
         if (tokens.size() == 1 && userOption == "help")
         {
             std::cout << "Here is a list of available commands:" << std::endl;
             std::cout << "============== " << std::endl;
             printMenu();
         }
-        else {
+        
+        else if(commandIsValid(tokens)) {
             printHelpCmd(tokens);
+        }
+        
+        else { // bad input
+            std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
         }
     }
     
@@ -94,11 +100,11 @@ void AdvisorMain::processUserOption(std::string userOption) {
         printProd();
     }
     
-    else if (tokens[0] == "min" && commandValidator(tokens)) {
+    else if (tokens[0] == "min" && commandIsValid(tokens)) {
         printMin(tokens);
     }
     
-    else if (tokens[0] == "max" && commandValidator(tokens)) {
+    else if (tokens[0] == "max" && commandIsValid(tokens)) {
         printMax(tokens);
     }
     
@@ -125,7 +131,54 @@ void AdvisorMain::processUserOption(std::string userOption) {
 }
 
 void AdvisorMain::printHelpCmd(const std::vector<std::string>& tokens) {
-    std::cout << "Help will be here " << std::endl;
+    if(tokens[1] == "help") {
+        std::cout << "Purpose: list all available commands" << std::endl;
+        std::cout << "Example: help" << std::endl;
+    }
+    
+    else if(tokens[1] == "prod") {
+        std::cout << "Purpose: list available products" << std::endl;
+        std::cout << "Example: prod" << std::endl;
+    }
+    
+    else if(tokens[1] == "min") {
+        std::cout << "Purpose: find minimum bid or ask for product in current time step" << std::endl;
+        std::cout << "parameters: PRODUCT NAME , TYPE (ask or bid)" << std::endl;
+        std::cout << "Example: min ETH/BTC ask" << std::endl;
+    }
+    
+    else if(tokens[1] == "max") {
+        std::cout << "Purpose: find maximum bid or ask for product in current time step" << std::endl;
+        std::cout << "parameters: PRODUCT NAME , TYPE (ask or bid)" << std::endl;
+        std::cout << "Example: max ETH/BTC bid" << std::endl;
+    }
+    
+    else if(tokens[1] == "avg") {
+        std::cout << "Purpose: compute average ask or bid for the sent product over the sent number of time steps." << std::endl;
+        std::cout << "parameters: PRODUCT NAME , TYPE (ask or bid) , STEPS (number)" << std::endl;
+        std::cout << "Example: avg ETH/BTC ask 10" << std::endl;
+    }
+    
+    else if(tokens[1] == "predict") {
+        std::cout << "Purpose: predict max or min ask or bid for the sent product for the next time step" << std::endl;
+        std::cout << "parameters: (max or min) , PRODUCT NAME , TYPE (ask or bid)" << std::endl;
+        std::cout << "Example: predict max ETH/BTC bid" << std::endl;
+    }
+    
+    else if(tokens[1] == "time") {
+        std::cout << "Purpose: state current time in dataset, i.e. which timeframe are we looking at" << std::endl;
+        std::cout << "Example: time" << std::endl;
+    }
+    
+    else if(tokens[1] == "step") {
+        std::cout << "Purpose: move to next time step" << std::endl;
+        std::cout << "Example: step" << std::endl;
+    }
+    
+    else { // bad input
+        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
+    }
+    
 }
 
 void AdvisorMain::printProd() {
@@ -143,11 +196,15 @@ void AdvisorMain::printMin(const std::vector<std::string>& tokens) {
     if (tokens[2] == "ask") {
         entries = orderBook.getOrders(OrderBookType::ask, tokens[1], currentTime);
         std::cout << "The min ask for " << tokens[1] << " is: " << OrderBook::getLowPrice(entries) << std::endl;
-
+        
     }
     else if (tokens[2] == "bid") {
         entries = orderBook.getOrders(OrderBookType::bid, tokens[1], currentTime);
         std::cout << "The min bid for " << tokens[1] << " is: " << OrderBook::getLowPrice(entries) << std::endl;
+    }
+    
+    else { // bad input
+        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
     }
     
 }
@@ -158,7 +215,7 @@ void AdvisorMain::printMax(const std::vector<std::string>& tokens) {
     if (tokens[2] == "ask") {
         entries = orderBook.getOrders(OrderBookType::ask, tokens[1], currentTime);
         std::cout << "The max ask for " << tokens[1] << " is: " << OrderBook::getHighPrice(entries) << std::endl;
-
+        
     }
     else if (tokens[2] == "bid") {
         entries = orderBook.getOrders(OrderBookType::bid, tokens[1], currentTime);
@@ -182,12 +239,12 @@ void AdvisorMain::gotoNextTimeframe() {
     std::cout << "Current time at:  " << currentTime << std::endl;
 }
 
-bool AdvisorMain::commandValidator(const std::vector<std::string> &tokens) {
+bool AdvisorMain::commandIsValid(const std::vector<std::string> &tokens) {
     bool productCheck = false;
     bool typeCheck = false;
     
     if((tokens[0] == "min" || tokens[0] == "max") && tokens.size() == 3) {
-        // check if product is correct
+        // Check if product is correct
         for (std::string const& p : orderBook.getKnownProducts()) {
             if (p == tokens[1])
             {
@@ -195,10 +252,10 @@ bool AdvisorMain::commandValidator(const std::vector<std::string> &tokens) {
             }
         }
         
-        // couldn't find the product
+        // Couldn't find the product
         if(!productCheck) return false;
-            
-        // I found a the product now check if type is correct
+        
+        // I found the product and now check if type is correct
         if (tokens[2] == "ask" || tokens[2] == "bid") {
             typeCheck = true;
         }
@@ -206,6 +263,14 @@ bool AdvisorMain::commandValidator(const std::vector<std::string> &tokens) {
         if(typeCheck) return true;
     }
     
-    // otherwise
+    else if(tokens[0] == "help" && tokens.size() == 2) {
+        for (std::string const& commanad : avaliableCommands) {
+            if (commanad == tokens[1]) {
+                return true;
+            }
+        }
+    }
+    
+    // Otherwise
     return false;
 }
