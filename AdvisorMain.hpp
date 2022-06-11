@@ -9,6 +9,7 @@
 #define AdvisorMain_hpp
 
 #include <stdio.h>
+#include "OrderBook.hpp"
 #include <string>
 #include <vector>
 
@@ -21,14 +22,16 @@ private:
     void printMenu();
     std::string getUserOption();
     void processUserOption(std::string userOption);
-    void printHelpCmd();
+    void printHelpCmd(const std::vector<std::string>& tokens);
     void printProd();
-    void printMin();
-    void printMax();
-    void printAvg();
-    void predict();
+    void printMin(const std::vector<std::string>& tokens);
+    void printMax(const std::vector<std::string>& tokens);
+    void printAvg(const std::vector<std::string>& tokens);
+    void predict(const std::vector<std::string>& tokens);
     void gotoNextTimeframe();
+    bool commandValidator(const std::vector<std::string>& tokens);
     
+    OrderBook orderBook{"20200601.csv"};
     std::string currentTime;
 };
 

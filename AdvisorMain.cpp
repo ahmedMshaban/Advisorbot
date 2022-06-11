@@ -16,18 +16,19 @@ AdvisorMain::AdvisorMain() {
 void AdvisorMain::init() {
     
     std::string input;
+    currentTime = orderBook.getEarliestTime();
+    
     printMenu();
     while(true) {
         input = getUserOption();
         processUserOption(input);
+        std::cout << "==============" << std::endl;
     }
-    
 }
 
 // Lists all available commands.
 void AdvisorMain::printMenu() {
     
-    std::cout << "============== " << std::endl;
     // list all available commands
     std::cout << "help " << std::endl;
     // output help for the specified command
@@ -47,7 +48,8 @@ void AdvisorMain::printMenu() {
     // move to next time step
     std::cout << "step " << std::endl;
     
-    std::cout << "============== " << std::endl;
+    std::cout << "==============" << std::endl;
+    
 }
 
 // Get user option
@@ -79,11 +81,12 @@ void AdvisorMain::processUserOption(std::string userOption) {
     if (userOption.find("help") != std::string::npos && tokens[0] == "help") {
         if (tokens.size() == 1 && userOption == "help")
         {
-            std::cout << "Here is a list of all available commands:" << std::endl;
+            std::cout << "Here is a list of available commands:" << std::endl;
+            std::cout << "============== " << std::endl;
             printMenu();
         }
         else {
-            printHelpCmd();
+            printHelpCmd(tokens);
         }
     }
     
@@ -91,24 +94,24 @@ void AdvisorMain::processUserOption(std::string userOption) {
         printProd();
     }
     
-    else if (userOption == "min") {
-        printMin();
+    else if (tokens[0] == "min" && commandValidator(tokens)) {
+        printMin(tokens);
     }
     
-    else if (userOption == "max") {
-        printMax();
+    else if (tokens[0] == "max" && commandValidator(tokens)) {
+        printMax(tokens);
     }
     
-    else if (userOption == "avg") {
-        printAvg();
+    else if (userOption.find("avg") != std::string::npos) {
+        printAvg(tokens);
     }
     
-    else if (userOption == "predict") {
-        predict();
+    else if (userOption.find("predict") != std::string::npos) {
+        predict(tokens);
     }
     
     else if (userOption == "time") {
-        std::cout << "Current time is:  " << currentTime << std::endl;
+        std::cout << "Current time at:  " << currentTime << std::endl;
     }
     
     else if (userOption == "step") {
@@ -116,40 +119,93 @@ void AdvisorMain::processUserOption(std::string userOption) {
     }
     
     else { // bad input
-        std::cout << "Bad input, please enter one of the command below" << std::endl;
+        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
     }
+    
 }
 
-void AdvisorMain::printHelpCmd() {
+void AdvisorMain::printHelpCmd(const std::vector<std::string>& tokens) {
     std::cout << "Help will be here " << std::endl;
 }
 
 void AdvisorMain::printProd() {
-    std::cout << "product list will be here " << std::endl;
+    
+    std::cout << "Here is a list of available products: " <<  std::endl;
+    for (std::string const& p : orderBook.getKnownProducts()) {
+        std::cout << "Product: " << p << std::endl;
+    }
     
 }
 
-void AdvisorMain::printMin() {
-    std::cout << "min will be here " << std::endl;
+void AdvisorMain::printMin(const std::vector<std::string>& tokens) {
+    
+    std::vector<OrderBookEntry> entries;
+    if (tokens[2] == "ask") {
+        entries = orderBook.getOrders(OrderBookType::ask, tokens[1], currentTime);
+        std::cout << "The min ask for " << tokens[1] << " is: " << OrderBook::getLowPrice(entries) << std::endl;
+
+    }
+    else if (tokens[2] == "bid") {
+        entries = orderBook.getOrders(OrderBookType::bid, tokens[1], currentTime);
+        std::cout << "The min bid for " << tokens[1] << " is: " << OrderBook::getLowPrice(entries) << std::endl;
+    }
     
 }
 
-void AdvisorMain::printMax() {
-    std::cout << "max will be here " << std::endl;
+void AdvisorMain::printMax(const std::vector<std::string>& tokens) {
+    
+    std::vector<OrderBookEntry> entries;
+    if (tokens[2] == "ask") {
+        entries = orderBook.getOrders(OrderBookType::ask, tokens[1], currentTime);
+        std::cout << "The max ask for " << tokens[1] << " is: " << OrderBook::getHighPrice(entries) << std::endl;
+
+    }
+    else if (tokens[2] == "bid") {
+        entries = orderBook.getOrders(OrderBookType::bid, tokens[1], currentTime);
+        std::cout << "The max bid for " << tokens[1] << " is: " << OrderBook::getHighPrice(entries) << std::endl;
+    }
     
 }
 
-void AdvisorMain::printAvg() {
+void AdvisorMain::printAvg(const std::vector<std::string>& tokens) {
     std::cout << "avg will be here " << std::endl;
     
 }
 
-void AdvisorMain::predict() {
+void AdvisorMain::predict(const std::vector<std::string>& tokens) {
     std::cout << "predict will be here " << std::endl;
     
 }
 
 void AdvisorMain::gotoNextTimeframe() {
-    std::cout << "time frame will be here " << std::endl;
+    currentTime = orderBook.getNextTime(currentTime);
+    std::cout << "Current time at:  " << currentTime << std::endl;
+}
+
+bool AdvisorMain::commandValidator(const std::vector<std::string> &tokens) {
+    bool productCheck = false;
+    bool typeCheck = false;
     
+    if((tokens[0] == "min" || tokens[0] == "max") && tokens.size() == 3) {
+        // check if product is correct
+        for (std::string const& p : orderBook.getKnownProducts()) {
+            if (p == tokens[1])
+            {
+                productCheck = true;
+            }
+        }
+        
+        // couldn't find the product
+        if(!productCheck) return false;
+            
+        // I found a the product now check if type is correct
+        if (tokens[2] == "ask" || tokens[2] == "bid") {
+            typeCheck = true;
+        }
+        
+        if(typeCheck) return true;
+    }
+    
+    // otherwise
+    return false;
 }
