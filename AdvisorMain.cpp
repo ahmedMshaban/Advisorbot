@@ -17,13 +17,14 @@ void AdvisorMain::init() {
     
     std::string input;
     currentTime = orderBook.getEarliestTime();
-    
     printMenu();
+    
     while(true) {
         input = getUserOption();
         processUserOption(input);
         std::cout << "==============" << std::endl;
     }
+    
 }
 
 // Lists all available commands.
@@ -52,28 +53,39 @@ void AdvisorMain::printMenu() {
     
 }
 
-// Get user option
+// Perform a basic check on user input and return it
 std::string AdvisorMain::getUserOption() {
     
-    std::string userOption;
+    // A default value in case something went wrong
+    std::string userOption = "Error with input.";
     std::string line;
     
     std::cout << "Type in one of the commands from the menu." << std::endl;
-    std::getline(std::cin, line);
     
-    try {
-        userOption = line;
-    }
-    catch(const std::exception& e) {
-        std::cout << "Error with input." << std::endl;
+    if(std::getline(std::cin, line)) {
+        
+        if(line == "")  {
+            userOption = "Pressed enter without typing anything";
+        }
+        
+        else {
+            // Go through all avaliable commands
+            for (std::string const& command : avaliableCommands) {
+                // Check if the user input contains any of the available commands
+                if(line.find(command) != std::string::npos) {
+                    userOption = line;
+                    break;
+                }
+            }
+        }
     }
     
     std::cout << "==============" << std::endl;
     std::cout << "You chose: " << userOption << std::endl;
-    
     return userOption;
 }
 
+// Figurout the user input related to which command.
 void AdvisorMain::processUserOption(std::string userOption) {
     
     std::vector<std::string> tokens = CSVReader::tokenise(userOption, ' ');
@@ -92,7 +104,7 @@ void AdvisorMain::processUserOption(std::string userOption) {
         }
         
         else { // bad input
-            std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
+            std::cout << "Bad input, please enter a valid command use help <command> to see valid uses" << std::endl;
         }
     }
     
@@ -125,12 +137,15 @@ void AdvisorMain::processUserOption(std::string userOption) {
     }
     
     else { // bad input
-        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
+        std::cout << "Bad input, please enter a valid command use help <command> to see valid uses" << std::endl;
     }
+    
     
 }
 
+// Print more info about each of the available commands and how to use them.
 void AdvisorMain::printHelpCmd(const std::vector<std::string>& tokens) {
+    
     if(tokens[1] == "help") {
         std::cout << "Purpose: list all available commands" << std::endl;
         std::cout << "Example: help" << std::endl;
@@ -176,7 +191,7 @@ void AdvisorMain::printHelpCmd(const std::vector<std::string>& tokens) {
     }
     
     else { // bad input
-        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
+        std::cout << "Bad input, please enter a valid command use help <command> to see valid uses" << std::endl;
     }
     
 }
@@ -193,6 +208,8 @@ void AdvisorMain::printProd() {
 void AdvisorMain::printMin(const std::vector<std::string>& tokens) {
     
     std::vector<OrderBookEntry> entries;
+    
+    //tokens[2] is the type
     if (tokens[2] == "ask") {
         entries = orderBook.getOrders(OrderBookType::ask, tokens[1], currentTime);
         std::cout << "The min ask for " << tokens[1] << " is: " << OrderBook::getLowPrice(entries) << std::endl;
@@ -204,7 +221,7 @@ void AdvisorMain::printMin(const std::vector<std::string>& tokens) {
     }
     
     else { // bad input
-        std::cout << "Bad input, please enter a valid command you can start with 'help'" << std::endl;
+        std::cout << "Bad input, please enter a valid command use help <command> to see valid uses" << std::endl;
     }
     
 }
@@ -239,6 +256,7 @@ void AdvisorMain::gotoNextTimeframe() {
     std::cout << "Current time at:  " << currentTime << std::endl;
 }
 
+// Perform a detail analyze of the command and return true if it is valid otherwise return false
 bool AdvisorMain::commandIsValid(const std::vector<std::string> &tokens) {
     bool productCheck = false;
     bool typeCheck = false;
