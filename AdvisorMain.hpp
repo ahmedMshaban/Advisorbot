@@ -30,9 +30,12 @@ private:
     void predict(const std::vector<std::string>& tokens);
     void gotoNextTimeframe();
     bool commandIsValid(const std::vector<std::string>& tokens);
-    
+    bool productNameIsValid(std::string productName, const std::vector<std::string>& knownProducts);
+    bool productTypeIsValid(std::string productType);
+    bool commanNameIsValid(std::string commandName, const std::vector<std::string>& knownCommands);
     OrderBook orderBook{"20200601.csv"};
     std::string currentTime;
+    int currentTimeIndex;
     std::vector<std::string> avaliableCommands{"help", "prod", "min", "max", "avg", "predict", "time", "step"};
 
 };
