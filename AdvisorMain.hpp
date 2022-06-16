@@ -49,6 +49,10 @@ private:
     bool commanNameIsValid(std::string commandName, const std::vector<std::string>& knownCommands);
     /** Return the price sum of the given products */
     double totalProductPrices(const std::vector<OrderBookEntry> orders);
+    /** Return a predicted min price for a product in the next time step */
+    double getPredictMin(std::string productName, int timestampIndex, std::string productType);
+    /** Return a predicted max price for a product in the next time step   */
+    double getPredictMax(std::string productName, int timestampIndex, std::string productType);
 
     OrderBook orderBook{"20200601.csv"};
     std::string currentTime;

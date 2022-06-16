@@ -20,8 +20,7 @@ void AdvisorMain::init() {
 
    std::string input;
    currentTime = orderBook.getEarliestTime();
-   // Starts at 1 to include the current time step.
-   currentTimeStep = 1;
+   currentTimeStep = 0;
    printMenu();
 
    while (true) {
@@ -48,13 +47,14 @@ void AdvisorMain::printMenu() {
    // compute average ask or bid for the sent product over the sent number
    std::cout << "avg <product> <ask/bid> <timesteps> " << std::endl;
    // predict max or min ask or bid for the sent product for the next time
-   std::cout << "predict <product> <ask/bid> " << std::endl;
+   std::cout << "predict <min/max> <product> <ask/bid> " << std::endl;
    // state current time in dataset, i.e. which timeframe are we looking at
    std::cout << "time " << std::endl;
    // step (no parameters) move to next time step
    // step with <index> parameter print current time step index
-   std::cout << "step <index>" << std::endl;
-
+   // step with <reset> parameter, reset the timestep to the initial from the start.
+   std::cout << "step <index/reset>" << std::endl;
+    
    std::cout << "==============" << std::endl;
 
 }
@@ -164,6 +164,9 @@ void AdvisorMain::printHelpCmd(const std::vector < std::string > & tokens) {
          std::cout << "step <index>: print current time step index." << std::endl;
          std::cout << "parameters: <index>" << std::endl;
          std::cout << "Example: step index" << std::endl;
+         std::cout << "step <reset>: reset the timestep to the initial from the start." << std::endl;
+         std::cout << "parameters: <reset>" << std::endl;
+         std::cout << "Example: step reset" << std::endl;
       }
    } else { // bad input
       std::cout << "Invalid input, use 'help <command>' for more inforamtion." << std::endl;
@@ -255,8 +258,8 @@ void AdvisorMain::printAvg(const std::vector < std::string > & tokens) {
       productTypeIsValid(productType)) {
 
       // Check if timesteps is correct
-      if (timesteps <= 0 || timesteps > currentTimeStep) {
-         std::cout << "Invalid input, current time step at: " << currentTimeStep << " <timesteps> need to be grater than zero and smaller than or equal current step use 'step index' to print current time step." << std::endl;
+      if (timesteps < 0 || timesteps > currentTimeStep) {
+         std::cout << "Invalid input, current time step at: " << currentTimeStep << " <timesteps> need to be grater than or equal zero and smaller than or equal current step use 'step index' to print current time step." << std::endl;
       }
 
       // All input are correct
@@ -266,7 +269,7 @@ void AdvisorMain::printAvg(const std::vector < std::string > & tokens) {
          std::vector < OrderBookEntry > orders_sub;
          float timestampPrices; // Price of the product in a time stamp
          double avg = 0;
-          int stepStartAt = currentTimeStep - timesteps;
+         int stepStartAt = currentTimeStep - timesteps;
 
 
          for (int i = 0; i < stepStartAt; i++) {
@@ -288,7 +291,7 @@ void AdvisorMain::printAvg(const std::vector < std::string > & tokens) {
                   timeTracker = orderBook.getNextTime(timeTracker);
                }
             }
-            avg = avg / timesteps;
+             avg /= timesteps + 1;
             std::cout << "The average " << productName << " ask price over the last " << timesteps << " timesteps was " << avg << std::endl;
 
          } else if (productType == "bid") {
@@ -306,7 +309,7 @@ void AdvisorMain::printAvg(const std::vector < std::string > & tokens) {
                }
             }
 
-            avg = avg / timesteps;
+             avg /= timesteps;
             std::cout << "The average " << productName << " bid price over the last " << timesteps << " timesteps was " << avg << std::endl;
          }
       }
@@ -318,8 +321,36 @@ void AdvisorMain::printAvg(const std::vector < std::string > & tokens) {
 
 /** Predict max or min ask or bid for the sent product for the next time step */
 void AdvisorMain::predict(const std::vector < std::string > & tokens) {
-   std::cout << "predict will be here " << std::endl;
+    std::string priceType = tokens[1]; //max/min
+    std::string productName = tokens[2];
+    std::string productType = tokens[3];
+    
+    // Check if the command size is correct ex: avg <product> <ask/bid> <timesteps>
+    // AND check if the product is one of the known products
+    // AND check if product type is valid
+    // And check if the price type is valid
+    if (tokens.size() == 4 &&
+       productNameIsValid(productName, orderBook.getKnownProducts()) &&
+        productTypeIsValid(productType) && (priceType == "min" || priceType == "max")) {
+        
+        if(priceType == "min") {
+            double predictMin =
+            getPredictMin(productName, currentTimeStep, productType);
 
+            std::cout << "The predicted minimum " << productType << " price of " << productName << " is " << std::to_string(predictMin) << std::endl ;
+        }
+        
+        if(priceType == "max") {
+            double predictMax =
+            getPredictMax(productName, currentTimeStep, productType);
+
+            std::cout << "The predicted maximum " << productType << " price of " << productName << " is " << std::to_string(predictMax) << std::endl ;
+        }
+        
+    } else {
+        std::cout << "Invalid input, use 'help predict' for more inforamtion." << std::endl;
+
+    }
 }
 
 /** Move to next time step */
@@ -332,8 +363,14 @@ void AdvisorMain::step(const std::vector < std::string > & tokens) {
       ++currentTimeStep;
       std::cout << "Moving to the next time step..." << std::endl;
       std::cout << "Current time at: " << currentTime << std::endl;
-   } else if (tokens.size() == 2 && tokens[1] == "index") {
-      std::cout << "Current time step at: " << currentTimeStep << std::endl;
+   } else if (tokens.size() == 2) {
+       if(tokens[1] == "index") {
+           std::cout << "Current time step at: " << currentTimeStep << std::endl;
+       }
+       else if(tokens[1] == "reset") {
+           currentTime = orderBook.getEarliestTime();
+           std::cout << "Current time step at: " << currentTimeStep << std::endl;
+       }
    } else {
       std::cout << "Invalid input, use 'help step' for more inforamtion." << std::endl;
    }
@@ -392,4 +429,70 @@ double AdvisorMain::totalProductPrices(const std::vector < OrderBookEntry > orde
    }
    avg = avg / orders.size();
    return avg;
+}
+
+/** Return a predicted min price for a product in the next time step   */
+double AdvisorMain::getPredictMin(std::string productName, int timestampIndex, std::string productType) {
+    
+
+    double minPred;
+    std::vector < OrderBookEntry > entries;
+    int currentTimestampIndex = timestampIndex;
+
+
+        while (currentTimestampIndex >= 0) {
+            
+            if(productType == "ask") {
+                entries = orderBook.getOrders(OrderBookType::ask, productName, currentTime);
+            }
+            else if(productType == "bid") {
+                entries = orderBook.getOrders(OrderBookType::bid, productName, currentTime);
+            }
+
+            double localMin = entries[0].price;
+
+            for (const OrderBookEntry& e : entries) {
+                if (e.price < localMin) localMin = e.price;
+            }
+
+            minPred += localMin;
+
+            currentTimestampIndex--;
+        }
+
+        minPred /= timestampIndex + 1;
+
+        return minPred;
+}
+
+/** Return a predicted max price for a product in the next time step   */
+double AdvisorMain::getPredictMax(std::string productName, int timestampIndex, std::string productType) {
+    
+    double maxPred;
+    std::vector < OrderBookEntry > entries;
+    int currentTimestampIndex = timestampIndex;
+    
+    while (currentTimestampIndex >= 0) {
+        
+        if(productType == "ask") {
+            entries = orderBook.getOrders(OrderBookType::ask, productName, currentTime);
+        }
+        else if(productType == "bid") {
+            entries = orderBook.getOrders(OrderBookType::bid, productName, currentTime);
+        }
+        
+        double localMax = entries[0].price;
+        for (const OrderBookEntry& e : entries) {
+            if (e.price > localMax) localMax = e.price;
+        }
+        
+
+        maxPred += localMax;
+
+        currentTimestampIndex--;
+    }
+
+    maxPred /= timestampIndex + 1;
+    
+    return maxPred;
 }
